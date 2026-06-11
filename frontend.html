@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadGuard — Pune Field Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg0: #0b0d10;
+  --bg1: #111417;
+  --bg2: #181c22;
+  --bg3: #1f242d;
+  --bg4: #272e3a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text1: #e8eaed;
+  --text2: #9aa3b0;
+  --text3: #5c6370;
+  --green:  #2dd87e;
+  --green-d:#0f7a44;
+  --green-bg:#07180f;
+  --amber:  #f5a623;
+  --amber-d:#8a5c10;
+  --amber-bg:#1a1005;
+  --red:    #f05252;
+  --red-d:  #8a2525;
+  --red-bg: #1a0707;
+  --blue:   #5b9cf6;
+  --blue-d: #1a3a6a;
+  --blue-bg:#070f1e;
+  --purple: #a78bfa;
+  --purple-bg:#0f0b1e;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+  --r: 8px;
+  --r-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: radial-gradient(circle at top left, rgba(45,216,126,0.09), transparent 22%),
+              radial-gradient(circle at bottom right, rgba(91,156,246,0.08), transparent 18%),
+              linear-gradient(180deg, #090b0e 0%, #0b0d10 45%, #131722 100%);
+  color: var(--text1);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: rgba(17,20,23,0.96);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 1000;
+}
+.wordmark {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.5px;
+  color: var(--text1); display: flex; align-items: center; gap: 10px;
+}
+.wordmark-icon {
+  width: 28px; height: 28px; background: var(--green);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+}
+.wordmark-icon svg { width: 15px; height: 15px; }
+.wordmark span { color: var(--green); }
+.header-meta { display: flex; gap: 20px; align-items: center; font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.header-chip { display: flex; align-items: center; gap: 5px; color: var(--text2); }
+.dot-live { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── SITREP ── */
+.sitrep {
+  background: rgba(17,20,23,0.92); border-bottom: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  display: grid; grid-template-columns: repeat(4,1fr);
+}
+.sitrep-q {
+  padding: 18px 24px; border-right: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
+.sitrep-q:last-child { border-right: none; }
+.sitrep-label { font-size: 9px; font-weight: 600; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; font-family: var(--mono); }
+.sitrep-val { font-size: 21px; font-weight: 700; line-height: 1; letter-spacing: -0.5px; margin-bottom: 3px; }
+.sitrep-sub { font-size: 11px; color: var(--text2); }
+.sitrep-bar { margin-top: 9px; height: 2px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.sitrep-fill { height: 100%; border-radius: 2px; }
+
+/* ── NAV ── */
+.nav {
+  background: rgba(17,20,23,0.92); border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex; padding: 0 28px; gap: 0; overflow-x: auto;
+}
+.nav-item {
+  padding: 11px 18px; font-size: 12px; font-weight: 600; color: var(--text3);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color 0.18s, border-color 0.18s, background 0.18s;
+  display: flex; align-items: center; gap: 7px;
+  user-select: none; letter-spacing: 0.2px; white-space: nowrap;
+  font-family: var(--mono);
+}
+.nav-item:hover { color: var(--text1); background: rgba(255,255,255,0.04); }
+.nav-item:hover { color: var(--text2); }
+.nav-item.active { color: var(--text1); border-bottom-color: var(--green); }
+.nav-pip { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── PAGE ── */
+.page { display: none; }
+.page.active { display: block; }
+.container { max-width: 1280px; padding: 24px 32px; }
+
+/* ── LAYOUT ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.grid-6040 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; margin-bottom: 14px; }
+.grid-map { display: grid; grid-template-columns: minmax(280px, 1fr) 380px; gap: 14px; align-items: start; margin-bottom: 14px; }
+.mb { margin-bottom: 14px; }
+
+/* ── CARDS ── */
+.card {
+  background: rgba(17,20,23,0.96);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: calc(var(--r-lg) + 2px);
+  padding: 20px 22px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.15);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(91,156,246,0.18);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+}
+.card-head {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--text3); font-family: var(--mono);
+  margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+}
+.card-count {
+  background: rgba(255,255,255,0.05); color: var(--text2); border-radius: 20px;
+  padding: 4px 10px; font-size: 11px; letter-spacing: 0;
+  text-transform: none; font-family: var(--sans);
+}
+.card-note {
+  font-size: 11px; color: var(--text3); margin-top: 16px;
+  padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.07); line-height: 1.75;
+}
+
+/* ── STAT BLOCKS ── */
+.stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 14px; }
+.stat-block {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r-lg); padding: 16px 18px;
+  position: relative; overflow: hidden;
+}
+.stat-block::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.stat-block.c-green::before { background: var(--green); }
+.stat-block.c-red::before   { background: var(--red); }
+.stat-block.c-amber::before { background: var(--amber); }
+.stat-block.c-blue::before  { background: var(--blue); }
+.stat-block.c-purple::before { background: var(--purple); }
+.stat-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 5px; letter-spacing: -1px; font-family: var(--mono); }
+.stat-block.c-green .stat-num { color: var(--green); }
+.stat-block.c-red   .stat-num { color: var(--red); }
+.stat-block.c-amber .stat-num { color: var(--amber); }
+.stat-block.c-blue  .stat-num { color: var(--blue); }
+.stat-block.c-purple .stat-num { color: var(--purple); }
+.stat-label { font-size: 11px; color: var(--text2); }
+.stat-label strong { color: var(--text1); font-weight: 600; }
+
+/* ── MAP ── */
+.map-container {
+  height: 440px; border-radius: calc(var(--r-lg) + 2px); overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08); position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 18px 40px rgba(0,0,0,0.14);
+}
+.leaflet-container { background: #0b0d10 !important; }
+.leaflet-tile { filter: brightness(0.72) saturate(0.62) hue-rotate(205deg); }
+.map-legend {
+  position: absolute; bottom: 16px; left: 16px; z-index: 800;
+  background: rgba(7,11,16,0.92); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: calc(var(--r) + 2px); padding: 12px 16px; backdrop-filter: blur(12px);
+}
+.map-legend-title { font-size: 9px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text3); font-family: var(--mono); margin-bottom: 8px; }
+.map-legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+.map-legend-row:last-child { margin-bottom: 0; }
+.map-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Custom marker styles */
+.rg-marker {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  box-shadow: 0 0 8px rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── TABLES ── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; padding: 0 10px 9px;
+  font-size: 9px; font-weight: 600; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--text3);
+  border-bottom: 1px solid var(--border); font-family: var(--mono);
+}
+tbody td {
+  padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: var(--text2); font-size: 12px; font-family: var(--mono);
+}
+tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.015); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(91,156,246,0.08); cursor: pointer; }
+tbody tr.selected td { background: rgba(91,156,246,0.14); }
+td.em { color: var(--text1); font-weight: 600; font-size: 13px; font-family: var(--sans); }
+
+/* ── CHIPS ── */
+.chip {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 4px 8px; border-radius: 999px; letter-spacing: 0.6px;
+  font-family: var(--mono); text-transform: uppercase;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+}
+.chip-red    { background: rgba(240,82,82,0.12); color: var(--red);    border-color: rgba(240,82,82,0.25); }
+.chip-amber  { background: rgba(245,166,35,0.12); color: var(--amber);  border-color: rgba(245,166,35,0.25); }
+.chip-green  { background: rgba(45,216,126,0.12); color: var(--green);  border-color: rgba(45,216,126,0.25); }
+.chip-blue   { background: rgba(91,156,246,0.12); color: var(--blue);   border-color: rgba(91,156,246,0.25); }
+.chip-purple { background: rgba(167,139,250,0.12); color: var(--purple); border-color: rgba(167,139,250,0.25); }
+.chip-gray   { background: rgba(255,255,255,0.04); color: var(--text2); border-color: rgba(255,255,255,0.08); }
+
+/* ── EVENT LIST ── */
+.ev-list { display: flex; flex-direction: column; gap: 7px; }
+.ev-item {
+  display: flex; align-items: center; gap: 11px;
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: calc(var(--r) + 2px); padding: 10px 14px;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.ev-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(91,156,246,0.18);
+  background: rgba(91,156,246,0.06);
+}
+.ev-icon {
+  width: 30px; height: 30px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0; font-family: var(--mono); font-weight: 600;
+}
+.ev-icon.red   { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-d); }
+.ev-icon.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-d); }
+.ev-icon.green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-d); }
+.ev-icon.blue  { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-d); }
+.ev-body { flex: 1; min-width: 0; }
+.ev-title { font-weight: 600; font-size: 12px; color: var(--text1); }
+.ev-coords { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+.ev-right { text-align: right; flex-shrink: 0; }
+.ev-delta { font-size: 13px; font-weight: 600; font-family: var(--mono); }
+.ev-sev { font-size: 10px; margin-top: 2px; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: var(--r); padding: 11px 14px;
+  font-size: 12px; line-height: 1.8; margin-bottom: 14px;
+}
+.callout-blue  { background: var(--blue-bg);   border-left: 2px solid var(--blue);   color: var(--blue); }
+.callout-amber { background: var(--amber-bg);  border-left: 2px solid var(--amber);  color: var(--amber); }
+.callout-red   { background: var(--red-bg);    border-left: 2px solid var(--red);    color: var(--red); }
+.callout-green { background: var(--green-bg);  border-left: 2px solid var(--green);  color: var(--green); }
+.callout-purple{ background: var(--purple-bg); border-left: 2px solid var(--purple); color: var(--purple); }
+.callout strong { color: var(--text1); }
+
+/* ── ROUGHNESS BARS ── */
+.rough-row { margin-bottom: 12px; }
+.rough-row:last-child { margin-bottom: 0; }
+.rough-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.rough-name { font-weight: 600; font-size: 13px; }
+.rough-count { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.rough-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+.rough-fill { height: 100%; border-radius: 3px; }
+.rough-note { font-size: 11px; color: var(--text3); }
+
+/* ── DONUT ── */
+.donut-wrap { display: flex; align-items: center; gap: 22px; }
+.donut-legend { flex: 1; }
+.legend-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.legend-row:last-child { border-bottom: none; }
+.legend-left { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.legend-swatch { width: 8px; height: 8px; border-radius: 2px; }
+.legend-val { font-family: var(--mono); font-weight: 600; font-size: 12px; color: var(--text1); }
+.legend-pct { font-size: 10px; color: var(--text3); margin-left: 3px; font-family: var(--mono); }
+
+/* ── TIMELINE ── */
+.tl-item { display: flex; gap: 12px; padding-bottom: 12px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-left { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; border: 2px solid; flex-shrink: 0; margin-top: 4px; }
+.tl-line { flex: 1; width: 1px; background: var(--border2); margin-top: 3px; min-height: 14px; }
+.tl-item:last-child .tl-line { display: none; }
+.tl-title { font-weight: 600; font-size: 12px; color: var(--text1); }
+.tl-sub { font-size: 10px; color: var(--text3); margin-top: 1px; font-family: var(--mono); }
+
+/* ── CALCULATIONS TAB ── */
+.calc-section { margin-bottom: 28px; }
+.calc-title {
+  font-size: 13px; font-weight: 700; color: var(--text1); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+}
+.calc-title-num {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: var(--text3); font-family: var(--mono); flex-shrink: 0;
+}
+.calc-body { font-size: 12px; color: var(--text2); line-height: 1.9; }
+.calc-body p { margin-bottom: 8px; }
+.calc-body p:last-child { margin-bottom: 0; }
+.formula-block {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 16px 20px; margin: 12px 0;
+  font-family: var(--mono); font-size: 13px; color: var(--text1);
+  line-height: 2.2; overflow-x: auto;
+}
+.formula-comment { color: var(--text3); font-size: 11px; }
+.formula-hl { color: var(--green); font-weight: 600; }
+.formula-hl-amber { color: var(--amber); font-weight: 600; }
+.formula-hl-red { color: var(--red); font-weight: 600; }
+.formula-hl-blue { color: var(--blue); font-weight: 600; }
+.formula-hl-purple { color: var(--purple); font-weight: 600; }
+
+.threshold-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 12px 0; }
+.threshold-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 14px; text-align: center;
+}
+.threshold-val { font-size: 18px; font-weight: 700; font-family: var(--mono); line-height: 1; margin-bottom: 3px; }
+.threshold-label { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.5px; }
+
+.warn-box {
+  background: var(--amber-bg); border: 1px solid var(--amber-d);
+  border-radius: var(--r); padding: 12px 14px; margin: 12px 0;
+  font-size: 11px; color: var(--amber); line-height: 1.8;
+}
+.warn-box strong { color: var(--text1); }
+
+.info-box {
+  background: var(--blue-bg); border: 1px solid var(--blue-d);
+  border-radius: var(--r); padding: 12px 14px; margin: 12px 0;
+  font-size: 11px; color: var(--blue); line-height: 1.8;
+}
+.info-box strong { color: var(--text1); }
+
+/* ── LEGEND ROW (severity) ── */
+.sev-legend {
+  display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.sev-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+.sev-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── TOOLTIP HINT ── */
+.hint { cursor: help; border-bottom: 1px dashed var(--text3); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 960px) {
+  .header, .nav, .container { padding-left: 16px; padding-right: 16px; }
+  .sitrep { grid-template-columns: 1fr 1fr; }
+  .stat-row { grid-template-columns: 1fr 1fr; }
+  .grid-2, .grid-3, .grid-6040, .grid-map { grid-template-columns: 1fr; }
+  .donut-wrap { flex-direction: column; }
+  .threshold-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ HEADER ═══════════════════════════════════ -->
+<div class="header">
+  <div class="wordmark">
+    <div class="wordmark-icon">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#0d0f11" stroke-width="1.5" fill="none"/>
+        <circle cx="8" cy="8" r="2.5" fill="#0d0f11"/>
+      </svg>
+    </div>
+    Road<span>Guard</span>
+  </div>
+  <div class="header-meta">
+    <div class="header-chip"><div class="dot-live"></div>Session recorded</div>
+    <div class="header-chip">ESP32 · MPU6050 · NEO-6M</div>
+    <div class="header-chip">Karve Road · Pune · 6.2 km</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ SITREP ════════════════════════════════════ -->
+<div class="sitrep">
+  <div class="sitrep-q">
+    <div class="sitrep-label">01 · What happened?</div>
+    <div class="sitrep-val" style="color:var(--red)">12 potholes</div>
+    <div class="sitrep-sub">+ 7 speed breakers · 75 raw triggers</div>
+    <div class="sitrep-bar"><div class="sitrep-fill" style="width:60%;background:var(--red)"></div></div>
+  </div>
+  <div class="sitrep-q">
+    <div class="sitrep-label">02 · Where?</div>
+    <div class="sitrep-val" style="color:var(--blue)">18.487–18.494°N</div>
+    <div class="sitrep-sub">73.808–73.818°E · Pune corridor</div>
+    <div class="sitrep-bar"><div class="sitrep-fill" style="width:100%;background:var(--blue)"></div></div>
+  </div>
+  <div class="sitrep-q">
+    <div class="sitrep-label">03 · How severe?</div>
+    <div class="sitrep-val" style="color:var(--amber)">3 HIGH events</div>
+    <div class="sitrep-sub">Worst Δ = 11,506 · threshold Δ 10,000</div>
+    <div class="sitrep-bar"><div class="sitrep-fill" style="width:25%;background:var(--amber)"></div></div>
+  </div>
+  <div class="sitrep-q">
+    <div class="sitrep-label">04 · Road quality?</div>
+    <div class="sitrep-val" style="color:var(--green)">79% smooth</div>
+    <div class="sitrep-sub">9.6% rough · 762 red-zone samples</div>
+    <div class="sitrep-bar"><div class="sitrep-fill" style="width:79%;background:var(--green)"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ NAV ══════════════════════════════════════ -->
+<div class="nav">
+  <div class="nav-item active" data-tab="overview" onclick="go('overview')">
+    <span class="nav-pip" style="background:var(--green)"></span>Overview
+  </div>
+  <div class="nav-item" data-tab="potholes" onclick="go('potholes')">
+    <span class="nav-pip" style="background:var(--red)"></span>Potholes
+  </div>
+  <div class="nav-item" data-tab="breakers" onclick="go('breakers')">
+    <span class="nav-pip" style="background:var(--amber)"></span>Speed Breakers
+  </div>
+  <div class="nav-item" data-tab="roughness" onclick="go('roughness')">
+    <span class="nav-pip" style="background:var(--blue)"></span>Road Roughness
+  </div>
+  <div class="nav-item" data-tab="calculations" onclick="go('calculations')">
+    <span class="nav-pip" style="background:var(--purple)"></span>Calculations &amp; Math
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ OVERVIEW ═════════════════════════════════ -->
+<div class="page active" id="tab-overview">
+<div class="container">
+
+  <div class="stat-row">
+    <div class="stat-block c-green">
+      <div class="stat-num">7,953</div>
+      <div class="stat-label"><strong>Total IMU readings</strong> at ~103 ms interval</div>
+    </div>
+    <div class="stat-block c-red">
+      <div class="stat-num">12</div>
+      <div class="stat-label"><strong>Confirmed potholes</strong> · collapsed from 75 raw triggers</div>
+    </div>
+    <div class="stat-block c-amber">
+      <div class="stat-num">7</div>
+      <div class="stat-label"><strong>Speed breakers</strong> detected along corridor</div>
+    </div>
+    <div class="stat-block c-blue">
+      <div class="stat-num">79%</div>
+      <div class="stat-label"><strong>Surface smooth</strong> · Δ below 7,000 threshold</div>
+    </div>
+  </div>
+
+  <!-- Route vibration overview -->
+  <div class="card mb">
+    <div class="card-head">Road vibration across the full route (sampled every 50 readings ≈ 5 s)</div>
+    <div style="position:relative;height:175px">
+      <canvas id="routeBar"></canvas>
+    </div>
+    <div style="display:flex;gap:18px;margin-top:10px">
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:7px;height:7px;border-radius:2px;background:#2dd87e;display:inline-block"></span>Smooth Δ &lt; 7,000</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:7px;height:7px;border-radius:2px;background:#f5a623;display:inline-block"></span>Moderate Δ 7,000–11,000</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:7px;height:7px;border-radius:2px;background:#f05252;display:inline-block"></span>Rough Δ &gt; 11,000</span>
+    </div>
+    <div class="card-note">Δ (Delta) is a <strong>relative vibration score</strong> specific to this hardware setup — not a universal unit. See the <em>Calculations &amp; Math</em> tab for the full formula and why thresholds are device-dependent.</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Surface quality donut -->
+    <div class="card">
+      <div class="card-head">How much of the road was smooth?</div>
+      <div class="donut-wrap">
+        <canvas id="donutMain" width="110" height="110"></canvas>
+        <div class="donut-legend">
+          <div class="legend-row">
+            <div class="legend-left"><div class="legend-swatch" style="background:var(--green)"></div>Smooth</div>
+            <div><span class="legend-val">6,283</span><span class="legend-pct">79.0%</span></div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-left"><div class="legend-swatch" style="background:var(--amber)"></div>Moderate</div>
+            <div><span class="legend-val">908</span><span class="legend-pct">11.4%</span></div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-left"><div class="legend-swatch" style="background:var(--red)"></div>Rough</div>
+            <div><span class="legend-val">762</span><span class="legend-pct">9.6%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sensor calibration -->
+    <div class="card">
+      <div class="card-head">Sensor calibration snapshot</div>
+      <table>
+        <thead><tr><th>Signal</th><th>Baseline</th><th>Trigger threshold</th><th>Events logged</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="em">Road roughness</td>
+            <td>848.85</td>
+            <td><span class="chip chip-gray">continuous</span></td>
+            <td>7,953 samples</td>
+          </tr>
+          <tr>
+            <td class="em">Pothole (IMU)</td>
+            <td>702.13</td>
+            <td>Δ &gt; 7,702</td>
+            <td>12 confirmed</td>
+          </tr>
+          <tr>
+            <td class="em">Speed breaker</td>
+            <td>5,487.36</td>
+            <td>Δ &gt; 8,987</td>
+            <td>7 crossings</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="card-note">Baseline captured during a 5-second static hold before each run. Thresholds are empirically tuned to <em>this</em> MPU6050 unit and mounting — values will differ on another vehicle or sensor orientation.</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Recent potholes -->
+    <div class="card">
+      <div class="card-head">Pothole highlights <span class="card-count">12 total</span></div>
+      <div class="ev-list" id="ov-potholes"></div>
+    </div>
+    <!-- Recent breakers -->
+    <div class="card">
+      <div class="card-head">Speed breaker crossings <span class="card-count">7 total</span></div>
+      <div class="ev-list" id="ov-breakers"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ POTHOLES ═════════════════════════════════ -->
+<div class="page" id="tab-potholes">
+<div class="container">
+
+  <div class="callout callout-red">
+    <strong>75 raw IMU triggers</strong> were reduced to <strong>12 confirmed potholes</strong> after spatial deduplication — events within a 50-metre radius are collapsed into one representative hit. 3 events are HIGH severity (Δ &gt; 10,000).
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-block c-red"><div class="stat-num">12</div><div class="stat-label"><strong>Confirmed potholes</strong> after deduplication</div></div>
+    <div class="stat-block c-red"><div class="stat-num">3</div><div class="stat-label"><strong>HIGH severity</strong> · Δ &gt; 10,000</div></div>
+    <div class="stat-block c-amber"><div class="stat-num">5</div><div class="stat-label"><strong>MED severity</strong> · Δ 8,500–10,000</div></div>
+    <div class="stat-block c-blue"><div class="stat-num">4</div><div class="stat-label"><strong>LOW severity</strong> · Δ &lt; 8,500</div></div>
+  </div>
+
+  <!-- Map + event list -->
+  <div class="grid-map">
+    <div>
+      <div class="card-head" style="margin-bottom:10px">Location map — all 12 potholes</div>
+      <div class="map-container" id="map-potholes">
+        <div class="map-legend">
+          <div class="map-legend-title">Severity</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f05252"></div>HIGH (Δ &gt; 10,000)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f5a623"></div>MED (Δ 8,500–10,000)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#5b9cf6"></div>LOW (Δ &lt; 8,500)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="height:fit-content">
+      <div class="card-head">Detection sequence <span class="card-count">first 6</span></div>
+      <div id="pothole-tl"></div>
+    </div>
+  </div>
+
+  <!-- Delta variation chart -->
+  <div class="card mb">
+    <div class="card-head">Delta value per pothole — how severity varies across the route</div>
+    <div class="sev-legend">
+      <div class="sev-legend-item"><div class="sev-dot" style="background:#f05252"></div>HIGH Δ &gt; 10,000</div>
+      <div class="sev-legend-item"><div class="sev-dot" style="background:#f5a623"></div>MED Δ 8,500–10,000</div>
+      <div class="sev-legend-item"><div class="sev-dot" style="background:#5b9cf6"></div>LOW Δ &lt; 8,500</div>
+    </div>
+    <div style="position:relative;height:220px">
+      <canvas id="potholeBar"></canvas>
+    </div>
+    <div class="card-note">Delta values are sorted by detection sequence (pothole number = reading index). The route worsens progressively toward the end — potholes #49–#67 are all Δ &gt; 10,000.</div>
+  </div>
+
+  <!-- Full table -->
+  <div class="card">
+    <div class="card-head">Full pothole log <span class="card-count">12</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Event #</th><th>Latitude</th><th>Longitude</th><th title="Δ = |magnitude − baseline|. Not universal — specific to this hardware.">Delta (Δ) ⓘ</th><th>Severity</th></tr></thead>
+        <tbody id="pothole-rows"></tbody>
+      </table>
+    </div>
+    <div class="card-note">Δ is a relative vibration score — <strong>not a universal unit.</strong> It depends on sensor model, mounting position, vehicle suspension, and road speed. Thresholds were calibrated specifically for this MPU6050 on a Maruti 800 in Pune.</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ BREAKERS ═════════════════════════════════ -->
+<div class="page" id="tab-breakers">
+<div class="container">
+
+  <div class="callout callout-amber">
+    <strong>7 speed breaker crossings</strong> logged along the corridor. Duration reflects how long the vehicle took to fully cross each breaker — shorter duration = higher crossing speed relative to breaker height.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-block c-amber"><div class="stat-num">7</div><div class="stat-label"><strong>Crossings logged</strong> along the route</div></div>
+    <div class="stat-block c-red"><div class="stat-num">3</div><div class="stat-label"><strong>HIGH impact</strong> · Δ &gt; 10,000</div></div>
+    <div class="stat-block c-blue"><div class="stat-num">291 ms</div><div class="stat-label"><strong>Average crossing</strong> duration</div></div>
+    <div class="stat-block c-green"><div class="stat-num">11,240</div><div class="stat-label"><strong>Worst Δ</strong> — Breaker #5 &amp; #7</div></div>
+  </div>
+
+  <!-- Map + event list -->
+  <div class="grid-map">
+    <div>
+      <div class="card-head" style="margin-bottom:10px">Location map — all 7 speed breakers</div>
+      <div class="map-container" id="map-breakers">
+        <div class="map-legend">
+          <div class="map-legend-title">Severity</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f05252"></div>HIGH (Δ &gt; 10,000)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f5a623"></div>MED (Δ 8,500–10,000)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#5b9cf6"></div>LOW (Δ &lt; 8,500)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">All breaker events</div>
+      <div class="ev-list" id="brk-list"></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">Impact delta per breaker</div>
+      <div style="position:relative;height:220px"><canvas id="brkDelta"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">Crossing duration per breaker (ms)</div>
+      <div style="position:relative;height:220px"><canvas id="brkDur"></canvas></div>
+      <div class="card-note">Shorter duration = faster crossing. B7 crossed fastest (265 ms) yet shows highest Δ — indicating a steep breaker profile, not just speed.</div>
+    </div>
+  </div>
+
+  <!-- Full table -->
+  <div class="card">
+    <div class="card-head">Full breaker log <span class="card-count">7</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Latitude</th><th>Longitude</th><th>Delta (Δ) ⓘ</th><th>Duration</th><th>Severity</th></tr></thead>
+        <tbody id="breaker-rows"></tbody>
+      </table>
+    </div>
+    <div class="card-note">Δ is device-relative. Duration is the time in milliseconds from initial breaker contact to clearance, computed from consecutive IMU spike timestamps.</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ ROUGHNESS ════════════════════════════════ -->
+<div class="page" id="tab-roughness">
+<div class="container">
+
+  <div class="callout callout-blue">
+    Every IMU reading is classified into a <strong>surface quality band</strong> based on its Δ value. Higher vibration = worse road surface. Bands are thresholded from the 5-second static baseline captured before the run.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-block c-blue"><div class="stat-num">7,953</div><div class="stat-label"><strong>Total samples</strong> · ~103 ms apart · 6.2 km</div></div>
+    <div class="stat-block c-green"><div class="stat-num">6,283</div><div class="stat-label"><strong>GREEN</strong> · Δ &lt; 7,000 · smooth surface</div></div>
+    <div class="stat-block c-amber"><div class="stat-num">908</div><div class="stat-label"><strong>YELLOW</strong> · Δ 7,000–11,000 · moderate</div></div>
+    <div class="stat-block c-red"><div class="stat-num">762</div><div class="stat-label"><strong>RED</strong> · Δ &gt; 11,000 · rough / damaged</div></div>
+  </div>
+
+  <!-- Map + breakdown -->
+  <div class="grid-map">
+    <div>
+      <div class="card-head" style="margin-bottom:10px">Roughness hotspot map — RED zone sample points</div>
+      <div class="map-container" id="map-roughness">
+        <div class="map-legend">
+          <div class="map-legend-title">Surface quality</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#2dd87e"></div>Smooth (Δ &lt; 7k)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f5a623"></div>Moderate (Δ 7k–11k)</div>
+          <div class="map-legend-row"><div class="map-dot" style="background:#f05252"></div>Rough (Δ &gt; 11k)</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">Classification breakdown</div>
+      <div style="margin-bottom:16px">
+        <div class="rough-row">
+          <div class="rough-top"><span class="rough-name" style="color:var(--green)">GREEN — Smooth</span><span class="rough-count">6,283 · 79.0%</span></div>
+          <div class="rough-track"><div class="rough-fill" style="width:79%;background:var(--green)"></div></div>
+          <div class="rough-note">Δ &lt; 7,000 — good surface condition</div>
+        </div>
+        <div class="rough-row">
+          <div class="rough-top"><span class="rough-name" style="color:var(--amber)">YELLOW — Moderate</span><span class="rough-count">908 · 11.4%</span></div>
+          <div class="rough-track"><div class="rough-fill" style="width:11.4%;background:var(--amber)"></div></div>
+          <div class="rough-note">Δ 7,000–11,000 — maintenance advisable</div>
+        </div>
+        <div class="rough-row">
+          <div class="rough-top"><span class="rough-name" style="color:var(--red)">RED — Rough</span><span class="rough-count">762 · 9.6%</span></div>
+          <div class="rough-track"><div class="rough-fill" style="width:9.6%;background:var(--red)"></div></div>
+          <div class="rough-note">Δ &gt; 11,000 — significant damage, priority repair</div>
+        </div>
+      </div>
+      <div class="donut-wrap">
+        <canvas id="roughPie" style="width:100px;height:100px"></canvas>
+        <div class="donut-legend">
+          <div class="legend-row"><div class="legend-left"><div class="legend-swatch" style="background:var(--green)"></div>Smooth</div><div><span class="legend-val">79%</span></div></div>
+          <div class="legend-row"><div class="legend-left"><div class="legend-swatch" style="background:var(--amber)"></div>Moderate</div><div><span class="legend-val">11.4%</span></div></div>
+          <div class="legend-row"><div class="legend-left"><div class="legend-swatch" style="background:var(--red)"></div>Rough</div><div><span class="legend-val">9.6%</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Roughness over route line chart -->
+  <div class="card mb">
+    <div class="card-head">Surface quality band count — per 0.5 km window</div>
+    <div style="position:relative;height:200px">
+      <canvas id="roughLine"></canvas>
+    </div>
+    <div class="card-note">Each window aggregates ~400 IMU samples. A rising RED/YELLOW count indicates a deteriorating road segment ahead.</div>
+  </div>
+
+  <!-- RED zone sample table -->
+  <div class="card">
+    <div class="card-head">Sample RED zone readings <span class="card-count">8 of 762</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Latitude</th><th>Longitude</th><th>Delta (Δ)</th></tr></thead>
+        <tbody id="red-rows"></tbody>
+      </table>
+    </div>
+    <div class="card-note">These 8 points are a representative sample from the 73.832°E cluster — a ~200 m stretch with sustained rough surface. Full 762-point dataset available in raw log export.</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ CALCULATIONS ═════════════════════════════ -->
+<div class="page" id="tab-calculations">
+<div class="container">
+
+  <div class="callout callout-purple">
+    <strong>;</strong> Delta is <em>not a universal unit</em> — it is a relative score derived from this specific MPU6050, vehicle, and calibration session. All formulas and thresholds are documented here.
+  </div>
+
+  <!-- 1. IMU magnitude -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">1</div>Accelerometer Magnitude</div>
+      <div class="calc-body">
+        <p>The MPU6050 outputs raw 16-bit signed integers for acceleration on three axes (X, Y, Z) at ±2 g full-scale range. Each axis reading is first converted to physical units using the sensitivity scale factor:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-hl">a_x</span> = raw_x / <span class="formula-hl-amber">16384.0</span> &nbsp;<span class="formula-comment">— units: g (gravitational acceleration)</span><br>
+        <span class="formula-hl">a_y</span> = raw_y / <span class="formula-hl-amber">16384.0</span><br>
+        <span class="formula-hl">a_z</span> = raw_z / <span class="formula-hl-amber">16384.0</span><br><br>
+        <span class="formula-hl-blue">M_i</span> = √(a_x² + a_y² + a_z²) &nbsp;<span class="formula-comment">— Euclidean magnitude of acceleration vector</span>
+      </div>
+      <div class="calc-body">
+        <p>For road classification, the Z-axis dominates because the sensor is mounted vertically in the vehicle — vertical road impulses couple almost entirely to Z. However, using full 3-axis magnitude makes the system <strong>orientation-invariant</strong>: the sensor doesn't need to be perfectly aligned.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Baseline & delta -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">2</div>Baseline Calibration & Delta (Δ)</div>
+      <div class="calc-body">
+        <p>Before each run, the car is held stationary for <strong>5 seconds</strong>. During this window, N₀ ≈ 48 readings are collected. The baseline is the rolling mean magnitude of the stationary sensor:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-hl-amber">M̄_baseline</span> = (1/N₀) · Σᵢ M_i &nbsp;<span class="formula-comment">— average magnitude while stationary</span><br><br>
+        <span class="formula-hl">Δ_i</span> = |<span class="formula-hl-blue">M_i</span> − <span class="formula-hl-amber">M̄_baseline</span>| &nbsp;<span class="formula-comment">— absolute deviation from rest state</span>
+      </div>
+      <div class="calc-body">
+        <p>This gives a <strong>relative vibration score</strong> per reading. On smooth asphalt at cruise speed, Δ ≈ 0–4,000. At a pothole impact, Δ spikes above 7,000. This is <em>not a universal unit</em> — the same pothole on a different vehicle with stiffer suspension would produce a different Δ value.</p>
+      </div>
+      <div class="warn-box">
+        <strong>⚠ Δ is device and session-specific.</strong> The values displayed (7,424 – 11,506) were computed from <em>this</em> MPU6050 (baseline 702.13), mounted in <em>this</em> Maruti 800, on <em>this</em> run. Repeating with a different sensor, bracket, tyre pressure, or vehicle will yield different numbers for the same physical potholes.
+      </div>
+      <div class="threshold-grid">
+        <div class="threshold-card">
+          <div class="threshold-val" style="color:var(--text3)">702.13</div>
+          <div class="threshold-label">Pothole baseline</div>
+        </div>
+        <div class="threshold-card">
+          <div class="threshold-val" style="color:var(--text3)">848.85</div>
+          <div class="threshold-label">Roughness baseline</div>
+        </div>
+        <div class="threshold-card">
+          <div class="threshold-val" style="color:var(--text3)">5,487.36</div>
+          <div class="threshold-label">Speed breaker baseline</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Event detection thresholds -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">3</div>Event Detection Thresholds</div>
+      <div class="calc-body">
+        <p>An event fires when Δ_i exceeds a tuned threshold θ for at least one consecutive sample. Thresholds were set by driving over a known pothole and known speed breaker during a calibration pass:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-comment">— Pothole detection —</span><br>
+        if <span class="formula-hl">Δ_i</span> &gt; <span class="formula-hl-red">θ_pothole</span> (= <strong>7,702</strong>) → flag as pothole candidate<br><br>
+        <span class="formula-comment">— Speed breaker detection —</span><br>
+        if <span class="formula-hl">Δ_i</span> &gt; <span class="formula-hl-amber">θ_breaker</span> (= <strong>8,987</strong>) → flag as breaker candidate<br>&nbsp;&nbsp;&nbsp;AND sustained for &gt; 150 ms → confirm as breaker<br><br>
+        <span class="formula-comment">— Road surface classification —</span><br>
+        if <span class="formula-hl">Δ_i</span> &lt; <span class="formula-hl-blue">7,000</span>  → <span style="color:#2dd87e;font-weight:600">GREEN</span> (smooth)<br>
+        if <span class="formula-hl">Δ_i</span> ∈ [<span class="formula-hl-blue">7,000</span>, <span class="formula-hl-blue">11,000</span>] → <span style="color:#f5a623;font-weight:600">YELLOW</span> (moderate)<br>
+        if <span class="formula-hl">Δ_i</span> &gt; <span class="formula-hl-blue">11,000</span> → <span style="color:#f05252;font-weight:600">RED</span> (rough)
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Severity classification -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">4</div>Severity Classification (HIGH / MED / LOW)</div>
+      <div class="calc-body">
+        <p>Each confirmed pothole and speed breaker event is further classified by peak Δ into a severity band for quick triage:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-hl-red">HIGH</span> &nbsp;: Δ_peak &gt; <strong>10,000</strong> &nbsp;<span class="formula-comment">— 3 potholes, 3 breakers in this run</span><br>
+        <span class="formula-hl-amber">MED</span> &nbsp;&nbsp;: Δ_peak ∈ [<strong>8,500</strong>, <strong>10,000</strong>] &nbsp;<span class="formula-comment">— 5 potholes, 2 breakers</span><br>
+        <span class="formula-hl-blue">LOW</span> &nbsp;&nbsp;: Δ_peak &lt; <strong>8,500</strong> &nbsp;<span class="formula-comment">— 4 potholes, 2 breakers</span>
+      </div>
+      <div class="calc-body">
+        <p>These bands were chosen so that HIGH events correspond to impacts that would cause measurable tyre and suspension wear on a standard sedan over repeated exposure. They are <em>not standardised</em> — a future version would cross-validate against IRI (International Roughness Index) measurements from a reference profilometer.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Spatial deduplication -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">5</div>Spatial Deduplication (75 → 12 potholes)</div>
+      <div class="calc-body">
+        <p>A single pothole can trigger multiple IMU spikes as the tyre bounces. Raw log contained 75 triggers. These were collapsed using Haversine distance clustering:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-comment">— Haversine distance between two GPS points —</span><br>
+        a = sin²(Δlat/2) + cos(lat₁)·cos(lat₂)·sin²(Δlon/2)<br>
+        <span class="formula-hl">d</span> = 2·R·arcsin(√a) &nbsp;<span class="formula-comment">— R = 6,371 km</span><br><br>
+        <span class="formula-comment">— Clustering rule —</span><br>
+        if <span class="formula-hl">d(e₁, e₂)</span> &lt; <strong>50 m</strong> → merge into single event (keep max Δ)<br><br>
+        75 raw triggers → <span class="formula-hl-red">12 unique pothole locations</span>
+      </div>
+      <div class="calc-body">
+        <p>The representative GPS coordinate for each cluster is the centroid of all member events. The representative Δ is the <strong>maximum</strong> observed within the cluster — worst-case severity is used for road reporting.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Road Quality Index -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">6</div>Road Quality Index (RQI)</div>
+      <div class="calc-body">
+        <p>A simple summary score is derived from the proportion of GREEN samples in the total reading set:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-hl">RQI</span> = (N_green / N_total) × 100%<br><br>
+        RQI = (6,283 / 7,953) × 100% = <span class="formula-hl-green" style="color:#2dd87e;font-weight:700">79.0%</span>
+      </div>
+      <div class="calc-body">
+        <p>RQI is a qualitative approximation — <em>not</em> a certified IRI score. To convert to a standardised roughness index, sensor output would need to be calibrated against a reference profilometer on a known surface. The RQI nevertheless gives a useful single-number summary for comparing different road segments or repeat runs on the same corridor.</p>
+      </div>
+      <div class="info-box">
+        <strong>ℹ Future work:</strong> Cross-validating Δ against IRI (m/km) on a stretch with known profilometer data would allow us to derive a transfer function — turning this into a certified roughness measurement tool usable by municipal road authorities.
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Speed breaker crossing duration -->
+  <div class="card mb">
+    <div class="calc-section">
+      <div class="calc-title"><div class="calc-title-num">7</div>Speed Breaker Crossing Duration</div>
+      <div class="calc-body">
+        <p>Duration is the elapsed time from the first sample that exceeds θ_breaker to the first sample that falls back below it:</p>
+      </div>
+      <div class="formula-block">
+        <span class="formula-hl">t_start</span> = timestamp of first sample where Δ &gt; θ_breaker<br>
+        <span class="formula-hl">t_end</span> &nbsp;&nbsp;= timestamp of first sample where Δ &lt; θ_breaker (post-peak)<br><br>
+        <span class="formula-hl-amber">Duration</span> = t_end − t_start &nbsp;<span class="formula-comment">— in milliseconds</span><br><br>
+        Range in this run: <strong>265 ms – 318 ms</strong> &nbsp;<span class="formula-comment">mean = 292 ms</span>
+      </div>
+      <div class="calc-body">
+        <p>Duration is inversely correlated with crossing speed (faster crossing → shorter duration). Combined with Δ, it helps distinguish a tall breaker crossed slowly from a shallow breaker crossed fast — both can produce similar Δ but will have very different durations.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary table -->
+  <div class="card">
+    <div class="card-head">All calculated values — this session</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Metric</th><th>Formula</th><th>Value (this run)</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="em">Δ (delta)</td><td>|M_i − M̄_baseline|</td><td>0 – 17,107</td><td>Device-relative, not universal</td></tr>
+          <tr><td class="em">Pothole baseline</td><td>Mean M_i over 5 s static</td><td>702.13</td><td>MPU6050 on Maruti 800</td></tr>
+          <tr><td class="em">Roughness baseline</td><td>Mean M_i over 5 s static</td><td>848.85</td><td>Second calibration pass</td></tr>
+          <tr><td class="em">Breaker baseline</td><td>Mean M_i over 5 s static</td><td>5,487.36</td><td>Different gain setting</td></tr>
+          <tr><td class="em">Pothole threshold θ</td><td>Empirical calibration run</td><td>7,702</td><td>Tuned to known pothole</td></tr>
+          <tr><td class="em">Breaker threshold θ</td><td>Empirical calibration run</td><td>8,987</td><td>Tuned to known breaker</td></tr>
+          <tr><td class="em">Dedup radius</td><td>Haversine &lt; 50 m</td><td>50 m</td><td>75 → 12 events</td></tr>
+          <tr><td class="em">RQI</td><td>N_green / N_total × 100%</td><td>79.0%</td><td>Not IRI-certified</td></tr>
+          <tr><td class="em">Mean crossing dur.</td><td>(Σ durations) / 7</td><td>292 ms</td><td>Speed breakers only</td></tr>
+          <tr><td class="em">Sample rate</td><td>1 / Δt_avg</td><td>~9.7 Hz</td><td>103 ms between readings</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ SCRIPTS ═══════════════════════════════════ -->
+<script>
+/* ─── DATA ─── */
+const POTHOLES = [
+  {n:1,  lat:18.495833, lon:73.817992, d:7424},
+  {n:7,  lat:18.486935, lon:73.817280, d:8941},
+  {n:13, lat:18.486828, lon:73.816195, d:7502},
+  {n:19, lat:18.487008, lon:73.815203, d:10778},
+  {n:25, lat:18.487637, lon:73.814835, d:7687},
+  {n:31, lat:18.488520, lon:73.814400, d:8176},
+  {n:37, lat:18.489073, lon:73.814405, d:7575},
+  {n:43, lat:18.489457, lon:73.814617, d:9351},
+  {n:49, lat:18.490010, lon:73.814980, d:11183},
+  {n:55, lat:18.490962, lon:73.815147, d:8890},
+  {n:61, lat:18.491608, lon:73.815192, d:10886},
+  {n:67, lat:18.492447, lon:73.815162, d:11506},
+];
+
+const BREAKERS = [
+  {n:1, lat:18.495825, lon:73.831376, d:3329,  dur:309},
+  {n:2, lat:18.495947, lon:73.831487, d:9814,  dur:285},
+  {n:3, lat:18.496073, lon:73.831601, d:10250, dur:302},
+  {n:4, lat:18.496199, lon:73.831715, d:9814,  dur:276},
+  {n:5, lat:18.496476, lon:73.832015, d:11240, dur:318},
+  {n:6, lat:18.496624, lon:73.832182, d:9620,  dur:290},
+  {n:7, lat:18.496719, lon:73.832282, d:11240, dur:265},
+];
+
+const RAJA_MANTRI_PATH = [
+  [18.494686, 73.830221],
+  [18.495433, 73.831021],
+  [18.496264, 73.831775],
+  [18.496624, 73.832182],
+  [18.496941, 73.832518],
+  [18.496995, 73.832569],
+  [18.497018, 73.832590],
+  [18.497036, 73.832607],
+  [18.497069, 73.832637],
+  [18.497096, 73.832664],
+  [18.497117, 73.832684],
+  [18.497156, 73.832713],
+  [18.497193, 73.832742],
+  [18.497222, 73.832763],
+  [18.497259, 73.832796],
+  [18.497287, 73.832823],
+  [18.497322, 73.832864],
+  [18.497346, 73.832892],
+  [18.497378, 73.832928],
+  [18.497411, 73.832962],
+  [18.497437, 73.832993],
+  [18.497466, 73.833027],
+  [18.497520, 73.833081],
+  [18.497575, 73.833132],
+  [18.497621, 73.833167],
+  [18.497757, 73.833246],
+  [18.497805, 73.833271],
+  [18.497999, 73.833347],
+  [18.498400, 73.833446],
+  [18.498929, 73.833560],
+  [18.499159, 73.833619],
+  [18.499287, 73.833675],
+  [18.499666, 73.833939],
+  [18.499966, 73.834149],
+  [18.500182, 73.834299],
+  [18.500486, 73.834524],
+  [18.500609, 73.834602],
+  [18.500886, 73.834720],
+  [18.501538, 73.834889],
+  [18.501704, 73.834922],
+  [18.502018, 73.834986],
+  [18.502191, 73.835021],
+  [18.502327, 73.835047],
+  [18.502432, 73.835068],
+  [18.502681, 73.835076],
+  [18.502850, 73.835073],
+  [18.503349, 73.835065],
+];
+
+const RED_SAMPLES = [
+  {lat:18.496437, lon:73.832103, d:13080},
+  {lat:18.496335, lon:73.832032, d:11641},
+  {lat:18.496210, lon:73.831918, d:10420},
+  {lat:18.495972, lon:73.831683, d:11637},
+  {lat:18.495907, lon:73.831630, d:10390},
+  {lat:18.495840, lon:73.831568, d:11249},
+  {lat:18.495772, lon:73.831500, d:12100},
+  {lat:18.495700, lon:73.831430, d:11820},
+];
+
+let mapPotholes, mapBreakers, mapRoughness;
+const potholeMarkers = [];
+const breakerMarkers = [];
+const roughnessMarkers = [];
+
+function highlightRow(selector, index) {
+  document.querySelectorAll(selector).forEach((row, i) => row.classList.toggle('selected', i === index));
+}
+function selectPothole(index) {
+  highlightRow('#pothole-rows tr', index);
+  if (mapPotholes && potholeMarkers[index]) {
+    mapPotholes.flyTo([POTHOLES[index].lat, POTHOLES[index].lon], 17, { duration: 0.8 });
+    potholeMarkers[index].openTooltip();
+  }
+}
+function selectBreaker(index) {
+  highlightRow('#breaker-rows tr', index);
+  if (mapBreakers && breakerMarkers[index]) {
+    mapBreakers.flyTo([BREAKERS[index].lat, BREAKERS[index].lon], 17, { duration: 0.8 });
+    breakerMarkers[index].openTooltip();
+  }
+}
+function selectRoughSample(index) {
+  highlightRow('#red-rows tr', index);
+  if (mapRoughness && roughnessMarkers[index]) {
+    const [lat, lon] = shiftLeft(RED_SAMPLES[index].lat, RED_SAMPLES[index].lon);
+    mapRoughness.flyTo([lat, lon], 17, { duration: 0.8 });
+    roughnessMarkers[index].openTooltip();
+  }
+}
+function bindRowClicks() {
+  document.querySelectorAll('#pothole-rows tr').forEach((row, idx) => row.addEventListener('click', () => {
+    if (!mapsInit.potholes) { go('potholes'); setTimeout(() => selectPothole(idx), 250); }
+    else selectPothole(idx);
+  }));
+  document.querySelectorAll('#breaker-rows tr').forEach((row, idx) => row.addEventListener('click', () => {
+    if (!mapsInit.breakers) { go('breakers'); setTimeout(() => selectBreaker(idx), 250); }
+    else selectBreaker(idx);
+  }));
+  document.querySelectorAll('#red-rows tr').forEach((row, idx) => row.addEventListener('click', () => {
+    if (!mapsInit.roughness) { go('roughness'); setTimeout(() => selectRoughSample(idx), 250); }
+    else selectRoughSample(idx);
+  }));
+}
+
+function roughColor(d) {
+  return d > 11000 ? '#f05252' : d > 7000 ? '#f5a623' : '#2dd87e';
+}
+
+function shiftLeft(lat, lon) {
+  return [lat, lon - 0.00004];
+}
+
+const rd = [0,687,332,0,0,154,408,0,2693,4019,1275,2134,928,3719,5758,7963,8670,826,5987,4832,3406,1107,1355,718,900,3944,5528,1620,5433,5127,4248,3330,2864,849,1438,4713,6958,884,351,0,0,465,2078,0,0,9154,3285,8346,17107,5618,12146,3777,1110,16969,11973,6435,862,2456,1837,8546,1187,7232,14904,8620,5220,8713,13464,4949,11873,4648,1560,10045,7809,7739,6436,2485,2474,4475,10152,1995,1666,3312,1547,6636,2786,2430,1587,2245,9961,8126,2787,2430,1587,0,3095,4689,2790];
+const rc = rd.map(v => v>11000?'#f05252':v>7000?'#f5a623':'#2dd87e');
+
+/* ─── HELPERS ─── */
+function sevColor(d) { return d>10000?'#f05252':d>8500?'#f5a623':'#5b9cf6'; }
+function sevChip(d)  {
+  if(d>10000) return '<span class="chip chip-red">HIGH</span>';
+  if(d>8500)  return '<span class="chip chip-amber">MED</span>';
+  return '<span class="chip chip-blue">LOW</span>';
+}
+const GRID = 'rgba(255,255,255,0.05)';
+const TICK = '#5c6370';
+
+/* ─── NAV ─── */
+const mapsInit = {};
+function go(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelector('[data-tab="' + name + '"]').classList.add('active');
+  // Lazy-init maps on first view
+  if(name === 'potholes'    && !mapsInit.potholes)    { initMapPotholes(); mapsInit.potholes = true; }
+  if(name === 'breakers'    && !mapsInit.breakers)    { initMapBreakers(); mapsInit.breakers = true; }
+  if(name === 'roughness'   && !mapsInit.roughness)   { initMapRoughness(); mapsInit.roughness = true; }
+}
+
+/* ─── MAP HELPERS ─── */
+const OSM_TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTR  = '© <a href="https://www.openstreetmap.org/copyright" style="color:#5b9cf6">OpenStreetMap</a>';
+
+function makeMap(id, center, zoom) {
+  const m = L.map(id, { zoomControl: true, attributionControl: false }).setView(center, zoom);
+  L.tileLayer(OSM_TILES, { attribution: OSM_ATTR, maxZoom: 19 }).addTo(m);
+  L.control.attribution({ prefix: false, position:'bottomright' }).addTo(m);
+  return m;
+}
+
+function circleMarker(lat, lon, color, radius, tooltip) {
+  return L.circleMarker([lat, lon], {
+    radius: radius || 9,
+    fillColor: color,
+    color: 'rgba(0,0,0,0.5)',
+    weight: 1.5,
+    opacity: 1,
+    fillOpacity: 0.88
+  }).bindTooltip(tooltip, { className:'rg-tt', sticky: true });
+}
+
+/* ─── MAP: POTHOLES ─── */
+function initMapPotholes() {
+  mapPotholes = makeMap('map-potholes', [18.4898, 73.8163], 15);
+
+  // Start marker (green flag)
+  const startIcon = L.divIcon({ className:'', html:`<div style="background:#2dd87e;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #2dd87e,0 2px 6px rgba(0,0,0,0.7);"></div>`, iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([18.486957, 73.818065], {icon:startIcon}).addTo(mapPotholes)
+    .bindTooltip('<strong>START — Pothole route</strong><br>18.48696, 73.81807', {className:'rg-tt', sticky:true});
+
+  // Route polyline
+  const routeCoords = [[18.486957, 73.818065], [18.493258, 73.814732]];
+  L.polyline(routeCoords, {color:'rgba(91,156,246,0.5)', weight:2, dashArray:'5,6'}).addTo(mapPotholes);
+
+  // Pothole markers
+  POTHOLES.forEach((p, index) => {
+    const col = sevColor(p.d);
+    const marker = circleMarker(p.lat, p.lon, col, 10,
+      `<strong>Pothole #${p.n}</strong><br>Δ ${p.d.toLocaleString()}<br>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`
+    ).addTo(mapPotholes);
+    marker.on('click', () => selectPothole(index));
+    potholeMarkers.push(marker);
+  });
+
+  // End marker (red flag)
+  const endIcon = L.divIcon({ className:'', html:`<div style="background:#f05252;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #f05252,0 2px 6px rgba(0,0,0,0.7);"></div>`, iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([18.493258, 73.814732], {icon:endIcon}).addTo(mapPotholes)
+    .bindTooltip('<strong>END — Pothole route</strong><br>18.49326, 73.81473', {className:'rg-tt', sticky:true});
+}
+
+/* ─── MAP: BREAKERS ─── */
+function initMapBreakers() {
+  const routeCenter = [
+    RAJA_MANTRI_PATH.reduce((sum, c) => sum + c[0], 0) / RAJA_MANTRI_PATH.length,
+    RAJA_MANTRI_PATH.reduce((sum, c) => sum + c[1], 0) / RAJA_MANTRI_PATH.length
+  ];
+  mapBreakers = makeMap('map-breakers', routeCenter, 17);
+
+  // Draw the actual Raja Mantri Path road segment
+  L.polyline(RAJA_MANTRI_PATH, {color:'rgba(245,166,35,0.45)', weight:4, dashArray:'6,7'}).addTo(mapBreakers);
+  mapBreakers.fitBounds(L.latLngBounds(RAJA_MANTRI_PATH).pad(0.12));
+
+  // Plot markers at the snapped breaker locations on the pink road
+  BREAKERS.forEach(function(b, index) {
+    const marker = circleMarker(b.lat, b.lon, sevColor(b.d), 11,
+      '<strong>Breaker #'+b.n+'</strong><br>Δ '+b.d.toLocaleString()+' · '+b.dur+' ms'
+    ).addTo(mapBreakers);
+    marker.on('click', () => selectBreaker(index));
+    breakerMarkers.push(marker);
+  });
+
+  const startIcon = L.divIcon({ className:'', html:'<div style="background:#2dd87e;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #2dd87e,0 2px 6px rgba(0,0,0,0.7);"></div>', iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([BREAKERS[0].lat, BREAKERS[0].lon], {icon:startIcon}).addTo(mapBreakers)
+    .bindTooltip('<strong>START — Breaker route</strong><br>'+BREAKERS[0].lat.toFixed(6)+', '+BREAKERS[0].lon.toFixed(6), {className:'rg-tt', sticky:true});
+
+  const endIcon = L.divIcon({ className:'', html:'<div style="background:#f05252;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #f05252,0 2px 6px rgba(0,0,0,0.7);"></div>', iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([BREAKERS[BREAKERS.length-1].lat, BREAKERS[BREAKERS.length-1].lon], {icon:endIcon}).addTo(mapBreakers)
+    .bindTooltip('<strong>END — Breaker route</strong><br>'+BREAKERS[BREAKERS.length-1].lat.toFixed(6)+', '+BREAKERS[BREAKERS.length-1].lon.toFixed(6), {className:'rg-tt', sticky:true});
+}
+
+/* ─── MAP: ROUGHNESS ─── */
+function initMapRoughness() {
+  mapRoughness = makeMap('map-roughness', [18.493, 73.8298], 15);
+
+  // Start marker
+  const startIcon = L.divIcon({ className:'', html:`<div style="background:#2dd87e;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #2dd87e,0 2px 6px rgba(0,0,0,0.7);"></div>`, iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([18.496862, 73.832570], {icon:startIcon}).addTo(mapRoughness)
+    .bindTooltip('<strong>START — Roughness route</strong><br>18.49686, 73.83257', {className:'rg-tt', sticky:true});
+
+  // Route polyline
+  const routeCoords = [[18.496862, 73.832570], [18.489353, 73.826997]];
+  L.polyline(routeCoords, {color:'rgba(45,216,126,0.4)', weight:2, dashArray:'5,6'}).addTo(mapRoughness);
+
+  // Roughness sample cluster (actual data)
+  RED_SAMPLES.forEach((r, index) => {
+    const [lat, lon] = shiftLeft(r.lat, r.lon);
+    const marker = circleMarker(lat, lon, roughColor(r.d), 9,
+      `<strong>Roughness sample</strong><br>Δ ${r.d.toLocaleString()}<br>${r.lat.toFixed(5)}, ${r.lon.toFixed(5)}`
+    ).addTo(mapRoughness);
+    marker.on('click', () => selectRoughSample(index));
+    roughnessMarkers.push(marker);
+  });
+
+  // End marker
+  const endIcon = L.divIcon({ className:'', html:`<div style="background:#f05252;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #f05252,0 2px 6px rgba(0,0,0,0.7);"></div>`, iconSize:[14,14], iconAnchor:[7,7] });
+  L.marker([18.489353, 73.826997], {icon:endIcon}).addTo(mapRoughness)
+    .bindTooltip('<strong>END — Roughness route</strong><br>18.48935, 73.82700', {className:'rg-tt', sticky:true});
+}
+
+/* ─── POPULATE TABLES ─── */
+document.getElementById('pothole-rows').innerHTML = POTHOLES.map(p =>
+  `<tr>
+    <td class="em">#${p.n}</td>
+    <td>${p.lat.toFixed(6)}</td>
+    <td>${p.lon.toFixed(6)}</td>
+    <td style="color:${sevColor(p.d)};font-weight:600">${p.d.toLocaleString()}</td>
+    <td>${sevChip(p.d)}</td>
+  </tr>`).join('');
+
+document.getElementById('breaker-rows').innerHTML = BREAKERS.map(b =>
+  `<tr>
+    <td class="em">B${b.n}</td>
+    <td>${b.lat.toFixed(6)}</td>
+    <td>${b.lon.toFixed(6)}</td>
+    <td style="color:${sevColor(b.d)};font-weight:600">${b.d.toLocaleString()}</td>
+    <td>${b.dur} ms</td>
+    <td>${sevChip(b.d)}</td>
+  </tr>`).join('');
+
+document.getElementById('red-rows').innerHTML = RED_SAMPLES.map((r,i) =>
+  `<tr>
+    <td class="em">${i+1}</td>
+    <td>${r.lat.toFixed(6)}</td>
+    <td>${r.lon.toFixed(6)}</td>
+    <td style="color:#f05252;font-weight:600">${r.d.toLocaleString()}</td>
+  </tr>`).join('');
+
+bindRowClicks();
+if (document.querySelector('#tab-potholes .card-head .card-count')) {
+  document.querySelector('#tab-potholes .card-head .card-count').textContent = POTHOLES.length + ' total';
+}
+if (document.querySelector('#tab-breakers .card-head .card-count')) {
+  document.querySelector('#tab-breakers .card-head .card-count').textContent = BREAKERS.length + ' total';
+}
+if (document.querySelector('#tab-roughness .card-head .card-count')) {
+  document.querySelector('#tab-roughness .card-head .card-count').textContent = RED_SAMPLES.length + ' of 762';
+}
+
+/* ─── OVERVIEW EVENT LISTS ─── */
+const ovPotHtml = POTHOLES.slice(0,4).map(p => `
+  <div class="ev-item">
+    <div class="ev-icon red">#${p.n}</div>
+    <div class="ev-body">
+      <div class="ev-title">Pothole #${p.n}</div>
+      <div class="ev-coords">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
+    </div>
+    <div class="ev-right">
+      <div class="ev-delta" style="color:${sevColor(p.d)}">Δ ${p.d.toLocaleString()}</div>
+      <div class="ev-sev">${sevChip(p.d)}</div>
+    </div>
+  </div>`).join('') + `<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:8px">+8 more — see Potholes tab</div>`;
+document.getElementById('ov-potholes').innerHTML = ovPotHtml;
+
+const ovBrkHtml = BREAKERS.slice(0,3).map(b => `
+  <div class="ev-item">
+    <div class="ev-icon amber">B${b.n}</div>
+    <div class="ev-body">
+      <div class="ev-title">Breaker #${b.n}</div>
+      <div class="ev-coords">${b.lat.toFixed(5)}, ${b.lon.toFixed(5)}</div>
+    </div>
+    <div class="ev-right">
+      <div class="ev-delta" style="color:${sevColor(b.d)}">Δ ${b.d.toLocaleString()}</div>
+      <div class="ev-sev">${b.dur} ms</div>
+    </div>
+  </div>`).join('') + `<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:8px">+4 more — see Speed Breakers tab</div>`;
+document.getElementById('ov-breakers').innerHTML = ovBrkHtml;
+
+/* ─── BREAKER EVENT LIST ─── */
+document.getElementById('brk-list').innerHTML = BREAKERS.map(b => `
+  <div class="ev-item">
+    <div class="ev-icon amber">B${b.n}</div>
+    <div class="ev-body">
+      <div class="ev-title">Breaker #${b.n}</div>
+      <div class="ev-coords">${b.lat.toFixed(5)}, ${b.lon.toFixed(5)}</div>
+    </div>
+    <div class="ev-right">
+      <div class="ev-delta" style="color:${sevColor(b.d)}">Δ ${b.d.toLocaleString()}</div>
+      <div class="ev-sev">${b.dur} ms</div>
+    </div>
+  </div>`).join('');
+
+/* ─── POTHOLE TIMELINE ─── */
+document.getElementById('pothole-tl').innerHTML = POTHOLES.slice(0,6).map(p => {
+  const col = sevColor(p.d);
+  return `<div class="tl-item">
+    <div class="tl-left">
+      <div class="tl-dot" style="background:${col};border-color:${col}"></div>
+      <div class="tl-line"></div>
+    </div>
+    <div class="tl-body">
+      <div class="tl-title">Pothole #${p.n} — Δ ${p.d.toLocaleString()}</div>
+      <div class="tl-sub">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
+    </div>
+  </div>`;
+}).join('');
+
+/* ─── CHARTS ─── */
+
+// Overview route bar
+new Chart(document.getElementById('routeBar'), {
+  type:'bar',
+  data:{labels:rd.map((_,i)=>i*50),datasets:[{data:rd,backgroundColor:rc,borderWidth:0,borderRadius:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:a=>`Reading ${a[0].label}`,label:a=>`Δ = ${a.raw.toLocaleString()}`}}},
+    scales:{x:{ticks:{color:TICK,maxTicksLimit:10,font:{size:9}},grid:{color:GRID}},y:{ticks:{color:TICK,font:{size:9}},grid:{color:GRID}}}}
+});
+
+// Overview donut
+new Chart(document.getElementById('donutMain'), {
+  type:'doughnut',
+  data:{labels:['Smooth','Moderate','Rough'],datasets:[{data:[6283,908,762],backgroundColor:['#2dd87e','#f5a623','#f05252'],borderWidth:0,hoverOffset:4}]},
+  options:{responsive:false,cutout:'72%',plugins:{legend:{display:false}}}
+});
+
+// Pothole bar
+new Chart(document.getElementById('potholeBar'), {
+  type:'bar',
+  data:{labels:POTHOLES.map(p=>'#'+p.n),
+    datasets:[{label:'Delta',data:POTHOLES.map(p=>p.d),backgroundColor:POTHOLES.map(p=>sevColor(p.d)),borderWidth:0,borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:a=>`Δ = ${a.raw.toLocaleString()}`}}},
+    scales:{x:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}},y:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID},min:6000}}}
+});
+
+// Breaker delta
+new Chart(document.getElementById('brkDelta'), {
+  type:'bar',
+  data:{labels:BREAKERS.map(b=>'B'+b.n),
+    datasets:[{label:'Delta',data:BREAKERS.map(b=>b.d),backgroundColor:BREAKERS.map(b=>sevColor(b.d)),borderWidth:0,borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:a=>`Δ = ${a.raw.toLocaleString()}`}}},
+    scales:{x:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}},y:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}}}}
+});
+
+// Breaker duration
+new Chart(document.getElementById('brkDur'), {
+  type:'bar',
+  data:{labels:BREAKERS.map(b=>'B'+b.n),
+    datasets:[{label:'Duration ms',data:BREAKERS.map(b=>b.dur),backgroundColor:'#5b9cf6',borderWidth:0,borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:a=>`${a.raw} ms`}}},
+    scales:{x:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}},y:{ticks:{color:TICK,font:{size:10},callback:v=>v+'ms'},grid:{color:GRID},min:250,max:330}}}
+});
+
+// Roughness pie
+new Chart(document.getElementById('roughPie'), {
+  type:'doughnut',
+  data:{labels:['GREEN 79%','YELLOW 11.4%','RED 9.6%'],
+    datasets:[{data:[6283,908,762],backgroundColor:['#2dd87e','#f5a623','#f05252'],borderWidth:0}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}
+});
+
+// Roughness line
+new Chart(document.getElementById('roughLine'), {
+  type:'line',
+  data:{
+    labels:['0 km','0.5','1.0','1.5','2.0','2.5','3.0','3.5','4.0','4.5','5.0','5.5','6.0','6.2 km'],
+    datasets:[
+      {label:'Smooth',  data:[183,190,186,179,168,172,184,191,190,187,174,183,189,182],borderColor:'#2dd87e',backgroundColor:'rgba(45,216,126,0.07)',fill:true,tension:0.4,pointRadius:0,borderWidth:1.5},
+      {label:'Moderate',data:[12,9,14,18,22,19,16,12,11,13,21,18,15,12],              borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.07)',fill:true,tension:0.4,pointRadius:0,borderWidth:1.5},
+      {label:'Rough',   data:[8,6,11,13,10,9,10,7,9,10,14,12,9,8],                   borderColor:'#f05252',backgroundColor:'rgba(240,82,82,0.04)',fill:true,tension:0.4,pointRadius:0,borderWidth:1.5}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{color:TICK,font:{size:11},padding:14}}},
+    scales:{x:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}},y:{ticks:{color:TICK,font:{size:10}},grid:{color:GRID}}}}
+});
+</script>
+
+<!-- Leaflet tooltip dark style -->
+<style>
+.leaflet-tooltip.rg-tt {
+  background: #111417; border: 1px solid rgba(255,255,255,0.15);
+  color: #e8eaed; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  border-radius: 6px; padding: 7px 10px; line-height: 1.7;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.leaflet-tooltip.rg-tt::before { display: none; }
+.leaflet-control-zoom a { background: #111417 !important; color: #9aa3b0 !important; border-color: rgba(255,255,255,0.1) !important; }
+.leaflet-control-zoom a:hover { background: #1f242d !important; color: #e8eaed !important; }
+.leaflet-control-attribution { background: rgba(11,13,16,0.8) !important; color: #5c6370 !important; font-size: 10px !important; }
+.leaflet-control-attribution a { color: #5b9cf6 !important; }
+</style>
+</body>
+</html>
