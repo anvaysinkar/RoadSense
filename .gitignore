@@ -1,0 +1,11 @@
+tests/build/
+__pycache__/
+*.pyc
+edge_ml/results/test_vectors.txt
+edge_ml/results/paper/
+edge_ml/results/full_dataset/
+*_events.csv
+*_map.csv
+*_review.csv
+*_ride_map.html
+.DS_Store

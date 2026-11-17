@@ -1,0 +1,72 @@
+RoadSense ML -- leave-one-vehicle-out (train on 2 vehicles, test on the 3rd)
+candidates from loose trigger K_LOCAL=2: hatchback 144 (6 B, 24 S, 114 none), sedan 145 (6 B, 33 S, 106 none), suv 164 (6 B, 27 S, 131 none)
+tags per drive (B/S): hatchback 6/24, sedan 6/34, suv 6/28
+
+training excludes ambiguous near-tag candidates: hatchback 35, sedan 35, suv 39
+ML decision: keep event if P(NONE) < 0.5; class = more likely of BREAKER / SURFACE
+
+Per held-out vehicle
+                            events untagged det.rec  B.rec B.prec  S.rec cls.acc
+-- test vehicle: hatchback
+  rules K_LOCAL=6 (paper)       30       12    0.60   0.83   0.62   0.54    1.00
+  rules K_LOCAL=2              144      114    1.00   0.67   0.19   0.83    0.80
+  ML tree_d4  raw   feats       56       39    0.57   0.67   0.17   0.38    0.76
+  ML forest   raw   feats       35       17    0.60   1.00   0.33   0.33    0.78   (seed 0 of 5)
+  ML logreg   raw   feats       73       50    0.77   1.00   0.12   0.46    0.74
+  ML tree_d4  norm  feats       76       48    0.93   0.83   0.24   0.75    0.82
+  ML forest   norm  feats       65       37    0.93   0.17   0.20   0.88    0.79   (seed 0 of 5)
+  ML logreg   norm  feats      100       70    1.00   0.50   0.19   0.92    0.83
+-- test vehicle: sedan
+  rules K_LOCAL=6 (paper)       31       11    0.50   1.00   0.46   0.32    0.85
+  rules K_LOCAL=2              145      106    0.97   0.67   0.29   0.85    0.85
+  ML tree_d4  raw   feats      102       65    0.93   0.33   0.33   0.85    0.84
+  ML forest   raw   feats       51       22    0.72   0.83   0.62   0.65    0.93   (seed 0 of 5)
+  ML logreg   raw   feats       65       33    0.80   0.83   0.56   0.71    0.91
+  ML tree_d4  norm  feats       55       25    0.75   0.67   0.44   0.68    0.90
+  ML forest   norm  feats       39       16    0.57   0.83   0.62   0.50    0.96   (seed 0 of 5)
+  ML logreg   norm  feats       44       21    0.57   0.83   0.45   0.47    0.91
+-- test vehicle: suv
+  rules K_LOCAL=6 (paper)       25       10    0.44   0.67   0.67   0.36    0.93
+  rules K_LOCAL=2              164      131    0.97   0.83   0.56   0.86    0.88
+  ML tree_d4  raw   feats      120       92    0.82   0.33   0.09   0.93    1.00
+  ML forest   raw   feats      105       73    0.94   0.50   1.00   0.93    0.91   (seed 0 of 5)
+  ML logreg   raw   feats      137      104    0.97   0.50   0.75   0.96    0.91
+  ML tree_d4  norm  feats       49       25    0.71   0.33   1.00   0.75    0.96
+  ML forest   norm  feats       41       17    0.71   0.67   0.80   0.61    0.88   (seed 0 of 5)
+  ML logreg   norm  feats       53       28    0.74   0.17   1.00   0.82    0.96
+
+Pooled over the 3 held-out vehicles (each vehicle predicted by a model that never saw it)
+                            events untagged det.rec  B.rec B.prec  S.rec cls.acc
+  rules K_LOCAL=6 (paper)       86       33    0.51   0.83   0.56   0.40    0.92
+  rules K_LOCAL=2              453      351    0.98   0.72   0.30   0.85    0.84
+  ML tree_d4  raw   feats      278      196    0.79   0.44   0.15   0.74    0.88
+  ML forest   raw   feats      198      118    0.77   0.70   0.48   0.65    0.86   seeds: S.rec 0.60-0.70, untagged 112-124
+  ML logreg   raw   feats      275      187    0.85   0.78   0.23   0.72    0.86
+  ML tree_d4  norm  feats      180       98    0.79   0.61   0.34   0.72    0.89
+  ML forest   norm  feats      156       78    0.75   0.63   0.55   0.67    0.89   seeds: S.rec 0.64-0.70, untagged 70-88
+  ML logreg   norm  feats      197      119    0.75   0.50   0.32   0.71    0.90
+
+Operating points (pooled LOVO). Rules: sweep K_LOCAL.  ML forest: sweep the P(NONE) cut-off (mean of 5 seeds).
+                            events untagged det.rec  B.rec B.prec  S.rec cls.acc
+  rules K_LOCAL=6               86       33    0.51   0.83   0.56   0.40    0.92
+  rules K_LOCAL=5              133       62    0.68   0.78   0.44   0.56    0.87
+  rules K_LOCAL=4              215      131    0.81   0.67   0.36   0.71    0.87
+  rules K_LOCAL=3              366      266    0.96   0.67   0.32   0.85    0.85
+  rules K_LOCAL=2              453      351    0.98   0.72   0.30   0.85    0.84
+  forest raw  P(NONE)<0.3         93       45    0.46   0.54   0.62   0.37    0.87
+  forest raw  P(NONE)<0.4        145       79    0.63   0.64   0.57   0.53    0.87
+  forest raw  P(NONE)<0.5        198      118    0.77   0.70   0.48   0.65    0.86
+  forest raw  P(NONE)<0.6        261      173    0.85   0.70   0.34   0.74    0.86
+  forest raw  P(NONE)<0.7        330      236    0.90   0.69   0.23   0.80    0.87
+  forest raw  P(NONE)<0.8        392      293    0.95   0.69   0.17   0.88    0.89
+  forest raw  P(NONE)<0.9        440      338    0.98   0.64   0.14   0.91    0.88
+  forest norm P(NONE)<0.3         80       26    0.52   0.47   0.59   0.48    0.91
+  forest norm P(NONE)<0.4        122       53    0.67   0.58   0.59   0.61    0.91
+  forest norm P(NONE)<0.5        156       78    0.75   0.63   0.55   0.67    0.89
+  forest norm P(NONE)<0.6        192      108    0.81   0.64   0.53   0.74    0.90
+  forest norm P(NONE)<0.7        231      142    0.85   0.64   0.46   0.79    0.90
+  forest norm P(NONE)<0.8        288      192    0.92   0.64   0.33   0.85    0.88
+  forest norm P(NONE)<0.9        373      272    0.97   0.62   0.19   0.90    0.88
+
+Feature importance (norm forest, all vehicles, mean of 5 seeds):
+  bf_0_4 0.141, jstd_n 0.088, hstd_n 0.088, dur 0.082, jpk_z 0.077, bf_10_20 0.064, jmean_z 0.056, hmax_n 0.053, hpp_n 0.049, hmin_n 0.045, ahstd_n 0.041, ratio_local 0.038, avpk_n 0.036, avstd_n 0.035, m1s_z 0.022, bf_20_50 0.020, span 0.019, bf_4_10 0.019, nhit 0.013, t_peak_ms 0.010, first_sign 0.004

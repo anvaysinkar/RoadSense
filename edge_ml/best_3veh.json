@@ -1,0 +1,8 @@
+{
+  "K_EVENT": 5,
+  "K_LOCAL": 6,
+  "K_HEAVE_TRIG": 6,
+  "K_HEAVE": 2.0,
+  "HEAVE_DUR_BREAKER_MS": 450,
+  "ROUGH_BURST_HITS": 3
+}
